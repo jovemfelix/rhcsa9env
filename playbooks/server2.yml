@@ -1,97 +1,112 @@
 ---
-- name: Setting Up Server 2 
+- name: Setting Up Server 2
   hosts: server2
   strategy: free
-  gather_facts: False
+  gather_facts: false
   ignore_errors: true
+  vars:
+    lab_hosts: |
+      127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+      ::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+      192.168.55.149 repo.nine.example.com repo
+      192.168.55.150 server1.nine.example.com server1
+      192.168.55.151 server2.nine.example.com server2
   tasks:
-  - name: Setting Up Python
-    file:
-      src: /usr/bin/python3.6
-      path: /usr/bin/python
-      state: link
-  - name: Setting Hostname
-    hostname: name=server2.eight.example.com
-  - name: Configuring network
-    shell: nmcli con mod "System eth1" ipv4.addresses 192.168.55.151/24 ipv4.gateway 192.168.55.1 ipv4.dns 8.8.8.8 ipv4.dns-search eight.example.com ipv4.method manual
-  - name: Reloading Network
-    service: 
-      name: NetworkManager
-      state: restarted 
-  - name: Building Host File
-    copy:
-      dest: /etc/hosts
-      content: "127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4\n::1            localhostlocalhost.localdomain localhost6 localhost6.localdomain6\n192.168.55.149 repo.eight.example.com repo\n192.168.55.150 server1.eight.example.com server1\n192.168.55.151  server2.eight.example.com server2"
-      force: yes
-  - name: Erasing Repos
-    shell: rm -rf /etc/yum.repos.d/*
-  - name: Creating Temporary Repo File
-    file:
-      path: /etc/yum.repos.d/rpms.repo
-      state: touch
-      mode: 0755
-  - name: Building Repo File
-    copy:
-      dest: /etc/yum.repos.d/rpms.repo
-      content: "[base]\nname=Base\nbaseurl=http://repo/BaseOS\ngpgcheck=0\nenabled=1\n\n[apps]\nname=Apps\nbaseurl=http://repo/AppStream\ngpgcheck=0\nenabled=1"
-      force: yes
-  - name: Environment Packages Installed.
-    yum: 
-      name: man-pages
-      state: present
-  - name: Starting services
-    service:
-      name: "{{ item }}"
-      state: started
-      enabled: yes
-    with_items:
-      - firewalld
-      - httpd
-  - name: Erasing Repos
-    shell: rm -rf /etc/yum.repos.d/*
-    become: yes
-  - name: Changing User Password
-    shell: echo vagrant | sudo passwd vagrant --stdin
-  - name: Changing Root Password
-    shell: echo password | sudo passwd root --stdin
-  - name: Creating Welcome Message
-    file:
-      path: /etc/profile.d/welcome.sh
-      state: touch
-      mode: 0755
-  - name: Building Welcome Message then rebooting
-    blockinfile:
-      dest: /etc/profile.d/welcome.sh
-      mode: 0644
-      block: |
-         #!/bin/bash
-         #
-         echo -e '
-         #          _     _        _        _         _           _          _   _         _       
-         #         / /\  /\ \     /\_\     / /\      /\ \        /\ \       /\_\/\_\ _   /\ \      
-         #        / /  \ \ \ \   / / /    / /  \     \_\ \      /  \ \     / / / / //\_\/  \ \     
-         #       / / /\ \_\ \ \_/ / /    / / /\ \__  /\__ \    / /\ \ \   /\ \/ \ \/ / / /\ \ \    
-         #      / / /\ \___\ \___/ /    / / /\ \___\/ /_ \ \  / / /\ \_\ /  \____\__/ /\/_/\ \ \   
-         #      \ \ \ \/___/\ \ \_/     \ \ \ \/___/ / /\ \ \/ /_/_ \/_// /\/________/     / / /   
-         #       \ \ \       \ \ \       \ \ \    / / /  \/_/ /____/\  / / /\/_// / /     / / /    
-         #   _    \ \ \       \ \ \  _    \ \ \  / / /     / /\____\/ / / /    / / /     / / /  _  
-         #  /_/\__/ / /        \ \ \/_/\__/ / / / / /     / / /______/ / /    / / /     / / /_/\_\ 
-         #  \ \/___/ /          \ \_\ \/___/ / /_/ /     / / /_______\/_/    / / /     / /_____/ / 
-         #   \_____\/            \/_/\_____\/  \_\/      \/__________/       \/_/      \________/  
-         #                                                                                         
-         '"#
-         # You are logged into \"`hostname`\" as the \"`whoami`\" account.
-         # This system is running `cat /etc/redhat-release`
-         #
-         # For root - use \`sudo\` or \`sudo su -\`
-         #
-         # Repo/AppStream 
-         # Available to use from http://repo.eight.example.com/BaseOS 
-         # and http://repo.eight.example.com/AppStream
-         # 
-         # There are also two additional NICs and drives.
-         "
-  - name: Adjusting Services and Rebooting
-    selinux:
-      state: enforcing
-      policy: targeted
+    - name: Setting Hostname
+      hostname:
+        name: server2.nine.example.com
+
+    - import_tasks: tasks/network-static.yml
+
+    - name: Building Host File
+      copy:
+        dest: /etc/hosts
+        content: "{{ lab_hosts }}"
+        force: true
+
+    - name: Erasing Repos
+      file:
+        path: /etc/yum.repos.d
+        state: absent
+
+    - name: Recreate empty yum.repos.d
+      file:
+        path: /etc/yum.repos.d
+        state: directory
+        mode: "0755"
+
+    - import_tasks: tasks/lab-repo-client.yml
+
+    - name: Install baseline packages from lab repo
+      dnf:
+        name:
+          - man-pages
+          - httpd
+        state: present
+      register: lab_packages_install
+      retries: 5
+      delay: 15
+      until: lab_packages_install is succeeded
+
+    - name: Starting firewalld
+      service:
+        name: firewalld
+        state: started
+        enabled: true
+
+    - import_tasks: tasks/httpd-lab.yml
+
+    - name: Erasing Repos
+      file:
+        path: /etc/yum.repos.d
+        state: absent
+
+    - name: Recreate empty yum.repos.d
+      file:
+        path: /etc/yum.repos.d
+        state: directory
+        mode: "0755"
+
+    - import_tasks: tasks/passwords-lab.yml
+
+    - name: Creating Welcome Message
+      file:
+        path: /etc/profile.d/welcome.sh
+        state: touch
+        mode: "0755"
+
+    - name: Building Welcome Message
+      blockinfile:
+        dest: /etc/profile.d/welcome.sh
+        mode: "0644"
+        block: |
+          #!/bin/bash
+          #
+          echo -e '
+          #          _     _        _        _         _           _          _   _         _
+          #         / /\  /\ \     /\_\     / /\      /\ \        /\ \       /\_\/\_\ _   /\ \
+          #        / /  \ \ \ \   / / /    / /  \     \_\ \      /  \ \     / / / / //\_\/  \ \
+          #       / / /\ \_\ \ \_/ / /    / / /\ \__  /\__ \    / /\ \ \   /\ \/ \ \/ / / /\ \ \
+          #      / / /\ \___\ \___/ /    / / /\ \___\/ /_ \ \  / / /\ \_\ /  \____\__/ /\/_/\ \ \
+          #      \ \ \ \/___/\ \ \_/     \ \ \ \/___/ / /\ \ \/ /_/_ \/_// /\/________/     / / /
+          #       \ \ \       \ \ \       \ \ \    / / /  \/_/ /____/\  / / /\/_// / /     / / /
+          #   _    \ \ \       \ \ \  _    \ \ \  / / /     / /\____\/ / / /    / / /     / / /  _
+          #  /_/\__/ / /        \ \ \/_/\__/ / / / / /     / / /______/ / /    / / /     / / /_/\_\
+          #  \ \/___/ /          \ \_\ \/___/ / /_/ /     / / /_______\/_/    / / /     / /_____/ /
+          #   \_____\/            \/_/\_____\/  \_\/      \/__________/       \/_/      \________/
+          '"#
+          # You are logged into \"`hostname`\" as the \"`whoami`\" account.
+          # Release: `cat /etc/redhat-release 2>/dev/null || cat /etc/os-release`
+          #
+          # For root - use \`sudo\` or \`sudo su -\`
+          #
+          # Repo/AppStream
+          # http://repo.nine.example.com/BaseOS
+          # http://repo.nine.example.com/AppStream
+          #
+          # Two additional NICs and drives are attached to this host.
+          "
+
+    - import_tasks: tasks/selinux-lab.yml
+      vars:
+        selinux_lab_state: enforcing

@@ -1,0 +1,13 @@
+---
+# Requires variable: selinux_lab_state (enforcing|permissive)
+- name: Set SELinux mode in config
+  lineinfile:
+    path: /etc/selinux/config
+    regexp: '^SELINUX='
+    line: "SELINUX={{ selinux_lab_state }}"
+    create: true
+
+- name: Apply SELinux mode at runtime
+  command: "setenforce {{ 1 if selinux_lab_state == 'enforcing' else 0 }}"
+  changed_when: false
+  failed_when: false

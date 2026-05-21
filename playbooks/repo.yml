@@ -1,71 +1,127 @@
 ---
-- name: Setting up Repo Server
+- name: Setting up Repo Server (CentOS Stream 9 mirror)
   hosts: repo
   strategy: free
   ignore_errors: true
   gather_facts: false
+  vars:
+    lab_hosts: |
+      127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+      ::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+      192.168.55.149 repo.nine.example.com repo
+      192.168.55.150 server1.nine.example.com server1
+      192.168.55.151 server2.nine.example.com server2
   tasks:
-  - name: Setting Hostname
-    hostname: name=repo.eight.example.com
-  - name: Configuring network
-    shell: nmcli con mod "System eth1" ipv4.addresses 192.168.55.149/24 ipv4.gateway 192.168.55.1 ipv4.dns 8.8.8.8 ipv4.method manual
-  - name: Building Host File
-    copy:
-      dest: /etc/hosts
-      content: "127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4\n:1         localhost localhost.localdomain localhost6 localhost6.localdomain6\n192.168.55.149 repo.eight.example.com repo\n192.168.55.150 server1.eight.example.com server1\n192.168.55.151 server2.eight.example.com server2"
-      force: yes
-  - name: Starting services
-    service:
-      name: "{{ item }}"
-      state: started
-      enabled: yes
-    with_items:
-      - firewalld
-      - httpd
-  - name: Enabling Firewall Services
-    firewalld: 
-      service: "{{ item }}"
-      immediate: yes
-      permanent: yes
-      state: enabled
-    with_items:
-      - http 
-      - https 
-      - ntp 
-      - dns
-      - ftp
-  - name: Enabling IPV6
-    shell: sysctl net.ipv6.conf.lo.disable_ipv6=0 ; sysctl net.ipv6.conf.all.disable_ipv6=0
-  - name: Creating Welcome Message
-    file:
-      path: /etc/profile.d/welcome.sh
-      state: touch
-      mode: 0755
-  - name: Fixing SELinux Contexts
-    shell: restorecon -Rv /var/www/html
-  - name: Building Welcome Message
-    blockinfile:
-      dest: /etc/profile.d/welcome.sh
-      block: |
-         #!/bin/bash
-         #
-         echo -e '
-         #           _          _           _         _       
-         #          /\ \       /\ \        /\ \      /\ \     
-         #         /  \ \     /  \ \      /  \ \    /  \ \    
-         #        / /\ \ \   / /\ \ \    / /\ \ \  / /\ \ \   
-         #       / / /\ \_\ / / /\ \_\  / / /\ \_\/ / /\ \ \  
-         #      / / /_/ / // /_/_ \/_/ / / /_/ / / / /  \ \_\ 
-         #     / / /__\/ // /____/\   / / /__\/ / / /   / / / 
-         #    / / /_____// /\____\/  / / /_____/ / /   / / /  
-         #   / / /\ \ \ / / /______ / / /     / / /___/ / /   
-         #  / / /  \ \ / / /_______/ / /     / / /____\/ /    
-         #  \/_/    \_\\/__________\/_/      \/_________/     
-         '"#
-         # Why are you here? You should be working on the system hosts...
-         # Anyway, try not to reboot me or bad stuff can happen.
-         #
-         # You are logged into \"`hostname`\" as the \"`whoami`\" account.
-         # This system is running `cat /etc/redhat-release`
-         #
-         "
+    - name: Setting Hostname
+      hostname:
+        name: repo.nine.example.com
+
+    - import_tasks: tasks/network-static.yml
+
+    - name: Building Host File
+      copy:
+        dest: /etc/hosts
+        content: "{{ lab_hosts }}"
+        force: true
+
+    - name: Install repo and mirror packages
+      dnf:
+        name:
+          - httpd
+          - firewalld
+          - dnf-plugins-core
+          - createrepo_c
+          - rsync
+        state: present
+
+    - name: Ensure httpd document root exists
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - /var/www/html/BaseOS
+        - /var/www/html/AppStream
+
+    - name: Sync BaseOS packages from CentOS Stream 9 (first run is slow)
+      command: >-
+        dnf reposync -p /var/www/html/BaseOS --newest-only
+        --repoid=baseos --arch=x86_64 --download-metadata
+      args:
+        creates: /var/www/html/BaseOS/baseos/repodata/repomd.xml
+
+    - name: Sync AppStream packages from CentOS Stream 9 (first run is slow)
+      command: >-
+        dnf reposync -p /var/www/html/AppStream --newest-only
+        --repoid=appstream --arch=x86_64 --download-metadata
+      args:
+        creates: /var/www/html/AppStream/appstream/repodata/repomd.xml
+
+    - import_tasks: tasks/publish-mirror-paths.yml
+
+    - name: Download lab bootstrap RPMs (httpd stack is not complete after reposync --newest-only)
+      shell: |
+        set -euo pipefail
+        dnf download --destdir /var/www/html/BaseOS/baseos/Packages \
+          httpd-filesystem mailcap
+        dnf download --destdir /var/www/html/AppStream/appstream/Packages \
+          httpd man-pages centos-logos-httpd
+      args:
+        creates: /var/www/html/BaseOS/baseos/Packages/mailcap-2.1.49-5.el9.noarch.rpm
+        executable: /bin/bash
+
+    - name: Refresh mirror repodata after bootstrap RPMs
+      command: createrepo_c --update {{ item }}
+      loop:
+        - /var/www/html/BaseOS/baseos
+        - /var/www/html/AppStream/appstream
+
+    - name: Starting services
+      service:
+        name: "{{ item }}"
+        state: started
+        enabled: true
+      loop:
+        - firewalld
+        - httpd
+
+    - import_tasks: tasks/firewall-lab-services.yml
+
+    - import_tasks: tasks/sysctl-lab-ipv6.yml
+
+    - name: Fixing SELinux Contexts
+      command: restorecon -Rv /var/www/html
+      changed_when: false
+
+    - name: Creating Welcome Message
+      file:
+        path: /etc/profile.d/welcome.sh
+        state: touch
+        mode: "0755"
+
+    - name: Building Welcome Message
+      blockinfile:
+        dest: /etc/profile.d/welcome.sh
+        block: |
+          #!/bin/bash
+          #
+          echo -e '
+          #           _          _           _         _
+          #          /\ \       /\ \        /\ \      /\ \
+          #         /  \ \     /  \ \      /  \ \    /  \ \
+          #        / /\ \ \   / /\ \ \    / /\ \ \  / /\ \ \
+          #       / / /\ \_\ / / /\ \_\  / / /\ \_\/ / /\ \ \
+          #      / / /_/ / // /_/_ \/_/ / / /_/ / / / /  \ \_\
+          #     / / /__\/ // /____/\   / / /__\/ / / /   / / /
+          #    / / /_____// /\____\/  / / /_____/ / /   / / /
+          #   / / /\ \ \ / / /______ / / /     / / /___/ / /
+          #  / / /  \ \ / / /_______/ / /     / / /____\/ /
+          #  \/_/    \_\\/__________\/_/      \/_________/
+          '"#
+          # RHCSA 9 lab — repo server (CentOS Stream 9 mirror)
+          # You are logged into \"`hostname`\" as the \"`whoami`\" account.
+          # Release: `cat /etc/redhat-release 2>/dev/null || cat /etc/os-release`
+          #
+          # Mirrors: http://repo.nine.example.com/BaseOS
+          #          http://repo.nine.example.com/AppStream
+          "

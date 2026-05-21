@@ -1,0 +1,12 @@
+---
+- name: Wipe first extra disk (vdb or sdb)
+  shell: |
+    set -euo pipefail
+    if [ -b /dev/vdb ]; then DEV=/dev/vdb
+    elif [ -b /dev/sdb ]; then DEV=/dev/sdb
+    else exit 0
+    fi
+    wipefs -af "${DEV}"
+    parted -s "${DEV}" mklabel msdos
+  args:
+    executable: /bin/bash

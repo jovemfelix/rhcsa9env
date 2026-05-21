@@ -1,133 +1,295 @@
-# RHCSA 8 Automated Practice Deployment
-_Powered by Ansible and Vagrant_ 
+# Ambiente de prática RHCSA 9 (RHEL 9)
 
-## Installation options below:
-## macOS
-_Gatekeeper will block virtualbox from installing. All you have to do is go into Security & Privacy of System Preferences and click Allow under the General tab and rerun installation._
-##### Install all at once with the command below:
-```
-/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)" && xcode-select --install &&brew install ansible ; brew install python ; brew install --cask vagrant ; brew install --cask VirtualBox ; brew install --cask virtualbox-extension-pack ; vagrant plugin install vagrant-guest_ansible
-```
+Laboratório local para estudo do **RHCSA** alinhado aos objetivos do **RHEL 9**, usando **CentOS Stream 9** nas VMs (equivalente comunitário próximo ao RHEL 9) e **Fedora 44** apenas como host (hypervisor + Ansible).
 
-##### Alternatively, you can install everything individually below.
-- [Install the Latest Version of Vagrant](https://www.vagrantup.com/downloads.html) - (`brew install --cask vagrant`)
-    - Vagrant Plugin - `vagrant plugin install vagrant-guest_ansible`
-- [Install the Latest Version of Virtualbox](https://www.virtualbox.org/wiki/Downloads) (`brew install --cask VirtualBox`)
-    - Virtual Box Extension Pack (`brew install --cask virtualbox-extension-pack`)
+Orquestração: **Vagrant** + **libvirt/KVM** (padrão no Fedora) ou **VirtualBox** + **Ansible**.
 
-##### Once the above software is installed. Do the following if you're running the environment on Mac:
-1. Create a separate `~/bin` directory and `cd` to it.  (The directory doesn't have to be ~/bin, it can be anything you want.)
-2. Clone the environment repo to it with `git clone https://github.com/rdbreak/rhcsa8env.git`
-3. Change to the `rhcsa8env` directory that is now in your `~/bin` directory.
-4. Run `vagrant up` to deploy the environment (If the environment has a designated repo VM it will take the longest to deploy the first time only, this is because the repo system has all the packages available to the base release but will be quicker on subsequent deployments.)
+---
 
-## CentOS/RHEL/Manjaro/Arch - Install all at once by Copy/Pasting the below command into your terminal as root.
-_NOTE - If it's been awhile since you've run yum update, do that first. Reboot if the kernel was updated. There may be some dependencies errors but don't be alarmed as this won't stop the environment from working._
+## Visão geral (o que este projeto prepara)
 
-_NOTE2 - If you receive an error for an ansible guest vagrant plugin, DO NOT worry, as there are two different plugins related to Ansible and only one needs to be installed._
-##### For CentoOS/RHEL7/Manjaro/Arch (Continue below for RHEL 8 specific script)
-```
-systemctl stop packagekit; yum install -y epel-release && yum install -y git binutils gcc make patch libgomp glibc-headers glibc-devel kernel-headers kernel-devel dkms libvirt libvirt-devel ruby-devel libxslt-devel libxml2-devel libguestfs-tools-c ; mkdir ~/Vagrant ; cd ~/Vagrant ; curl -o  vagrant_2.2.6_x86_64.rpm https://releases.hashicorp.com/vagrant/2.2.6/vagrant_2.2.6_x86_64.rpm && yum install -y vagrant_2.2.6_x86_64.rpm && vagrant plugin install vagrant-guest_ansible ; vagrant plugin install vagrant-guest-ansible ; wget -O /etc/yum.repos.d/virtualbox.repo wget http://download.virtualbox.org/virtualbox/rpm/rhel/virtualbox.repo ; yum install -y VirtualBox-6.0 && systemctl start packagekit
-```
-##### If you're using RHEL 8, use the script below:
-```
-systemctl stop packagekit; dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm ; dnf install -y git binutils gcc make patch libgomp glibc-headers glibc-devel kernel-headers kernel-devel dkms libvirt libvirt-devel ruby-devel libxslt-devel libxml2-devel libguestfs-tools-c ; mkdir ~/Vagrant ; cd ~/Vagrant ; curl -o  vagrant_2.2.6_x86_64.rpm https://releases.hashicorp.com/vagrant/2.2.6/vagrant_2.2.6_x86_64.rpm && dnf install -y vagrant_2.2.6_x86_64.rpm && vagrant plugin install vagrant-guest_ansible ; wget -O /etc/yum.repos.d/virtualbox.repo wget http://download.virtualbox.org/virtualbox/rpm/rhel/virtualbox.repo ; dnf install -y VirtualBox-6.0 && /usr/lib/virtualbox/vboxdrv.sh setup ; usermod -a -G vboxusers root ; systemctl start packagekit
-```
-##### Also, install the Virtualbox extension pack below
-- [Install the Virtual Box Extension Pack](https://www.virtualbox.org/wiki/Downloads)
+Laboratório **local e repetível** que imita o tipo de cenário do exame **RHCSA em RHEL 9**: dois servidores de trabalho sem Internet nem repos configurados, e um servidor de repositório na rede interna com `BaseOS` e `AppStream` servidos por HTTP — como no material Red Hat, mas usando **CentOS Stream 9** nas VMs e **Fedora 44** só como máquina host.
 
-##### Once the above software is installed. Do the following if you're running the environment on Linux:
-1. Create a separate `~/bin` directory and `cd` to it.  (The directory doesn't have to be ~/bin, it can be anything you want.)
-2. Clone the environment repo to it with `git clone https://github.com/rdbreak/rhcsa8env.git`
-3. Change to the `rhcsa8env` directory that is now in your `~/bin` directory.
-4. Run `vagrant up` to deploy the environment (If the environment has a designated repo VM it will take the longest to deploy the first time only, this is because the repo system has all the packages available to the base release but will be quicker on subsequent deployments.)
-
-## Windows/Fedora
-- If using Windows:
-- [Install the Latest Version of Vagrant](https://www.vagrantup.com/downloads.html)
-- [Install the Latest Version of Virtualbox and Virtual Box Extension Pack](https://www.virtualbox.org/wiki/Downloads)
-- Then install the following vagrant plugin via PowerShell as Administrator `vagrant plugin install vagrant-guest_ansible` 
-- If using Fedora, run `dnf update -y` to update your system, then run the script below as root to install everything at once:
-```
-dnf -y install wget git binutils gcc make patch libgomp glibc-headers glibc-devel kernel-headers kernel-devel dkms libvirt libvirt-devel ruby-devel libxslt-devel libxml2-devel ; wget http://download.virtualbox.org/virtualbox/rpm/fedora/virtualbox.repo ; mv virtualbox.repo /etc/yum.repos.d/virtualbox.repo ; dnf install -y VirtualBox-6.0 ; usermod -a -G vboxusers ${USER} ; /usr/lib/virtualbox/vboxdrv.sh setup ; dnf -y install vagrant ; dnf remove -y rubygem-fog-core ; vagrant plugin install vagrant-guest_ansible
+```mermaid
+flowchart LR
+  subgraph host [Fedora 44 host]
+    V[Vagrant]
+    A[Ansible]
+    S[scripts/]
+  end
+  subgraph lab [Rede 192.168.55.0/24]
+    R[repo .149\nmirror HTTP]
+    S1[server1 .150\nobjetivos gerais]
+    S2[server2 .151\n+2 NICs +2 discos]
+  end
+  V --> R
+  V --> S1
+  V --> S2
+  A --> R
+  A --> S1
+  A --> S2
+  S1 -. consome .-> R
+  S2 -. consome .-> R
 ```
 
-##### Once the above software is installed. Do the following if you're running the environment on Windows:
-1. Create a separate `~/bin` directory and `cd` to it using the same PowerShell/Terminal as Administrator/Root.  (The directory doesn't have to be ~/bin, it can be anything you want.)
-2. Use your browser of choice and navigate to https://github.com/rdbreak/rhcsa8env, press the green “Clone or download” button then the “Download ZIP” button. Or use Github Desktop (See below).
-3. Once downloaded, unzip the file and move it to the directory you created earlier, `~/bin` in the above example.
-4. Use PowerShell/Terminal as Administrator/Root again and cd to the `~/bin/rhcsa8env` directory then run `vagrant up` to deploy the environment. (If the environment has a designated repo VM it will take the longest to deploy the first time only, this is because the repo system has all the packages available to the base release but will be quicker on subsequent deployments.)
+| Componente | Função no estudo |
+|------------|------------------|
+| **repo** | Espelha pacotes CentOS Stream 9 (`reposync`), publica `http://repo/.../BaseOS` e `AppStream`, corre `httpd` e `firewalld` |
+| **server1** | “Máquina A” do exame: IP fixo, `httpd` instalado via repo offline, **sem** ficheiros em `/etc/yum.repos.d`, SELinux **enforcing**, senhas do lab |
+| **server2** | “Máquina B”: igual ao server1 no baseline, mais **duas NICs** extras e **dois discos** de 16 GiB (`/extradisk1`, `/extradisk2`) para tarefas de storage/partições |
+| **Ansible** | Configuração inicial (`master.yml`) e **reset** após simulados (`reset.yml`) |
+| **Scripts** | Subir o lab, verificar saúde, reset e SSH opcional — sem memorizar dezenas de comandos |
 
+**O que não é:** curso, simulado com enunciado nem certificação — é só **infraestrutura** pronta para praticar objetivos RHCSA (users, LVM, rede, SELinux, containers, etc.) em VMs parecidas com o exame.
 
-## Debian
-_NOTE - If it's been awhile since you've run apt update, do that first. Reboot if the kernel was updated._
+**Fluxo típico:** `setup-host-fedora44.sh` (uma vez) → `lab-up.sh` → estudar em server1/server2 usando o repo → `lab-reset.sh` → repetir.
 
-##### Install all at once by Copy/Pasting the below command into your terminal as root.
+**Prática EX200 (enunciado em inglês, validação em português):** pasta [practice/](practice/) — `./scripts/lab-practice.sh list`
+
+---
+
+## Objetivo
+
+Simular o cenário de exame (dois servidores + repositório offline `BaseOS`/`AppStream`) sem assinatura RHEL, com pacotes e layout compatíveis com a trilha **RHEL 9.0**.
+
+| Papel | Hostname | IP (rede do lab, eth1) |
+|--------|----------|-------------------------|
+| Repo | `repo.nine.example.com` | 192.168.55.149 |
+| Server 1 | `server1.nine.example.com` | 192.168.55.150 |
+| Server 2 | `server2.nine.example.com` | 192.168.55.151 |
+
+**Box Vagrant:** `generic/centos9s` (CentOS Stream 9)
+
+Repositório HTTP local (após o primeiro `reposync`):
+
+- `http://repo.nine.example.com/BaseOS`
+- `http://repo.nine.example.com/AppStream`
+
+---
+
+## Pré-requisitos (Fedora 44)
+
+- CPU com virtualização (Intel VT-x / AMD-V) habilitada na firmware
+- ~30 GB de disco livre (mirror do repo na primeira subida)
+- Acesso à Internet na primeira execução (sincronização do repo)
+
+### Instalação do host (uma vez)
+
+```bash
+sudo ./scripts/setup-host-fedora44.sh
+chmod +x scripts/*.sh
 ```
-sudo snap install ruby ; sudo apt install ruby-bundler git -y; wget -c https://releases.hashicorp.com/vagrant/2.2.6/vagrant_2.2.6_x86_64.deb ; sudo dpkg -i vagrant_2.2.6_x86_64.deb ; wget -q https://www.virtualbox.org/download/oracle_vbox_2016.asc -O- | sudo apt-key add - ; wget -q https://www.virtualbox.org/download/oracle_vbox.asc -O- | sudo apt-key add - ; sudo add-apt-repository "deb http://download.virtualbox.org/virtualbox/debian bionic contrib"; sudo apt update; sudo apt install -y virtualbox-6.0 ; vagrant plugin install vagrant-guest_ansible
+
+O script instala **Vagrant**, **vagrant-libvirt**, **Ansible**, **libvirt** e (opcional) **VirtualBox**.
+
+```bash
+vagrant plugin list   # deve incluir vagrant-libvirt
+virsh -c qemu:///system list --all
 ```
-##### Also, install the Virtualbox extension pack below
-- [Virtual Box Extension Pack](https://www.virtualbox.org/wiki/Downloads)
 
-##### Once the above software is installed. Do the following if you're running the environment on Linux:
-1. Create a separate `~/bin` directory and `cd` to it.  (The directory doesn't have to be ~/bin, it can be anything you want.)
-2. Clone the environment repo to it with `git clone https://github.com/rdbreak/rhcsa8env.git`
-3. Change to the `rhcsa8env` directory that is now in your `~/bin` directory.
-4. Run `vagrant up` to deploy the environment (If the environment has a designated repo VM it will take the longest to deploy the first time only, this is because the repo system has all the packages available to the base release but will be quicker on subsequent deployments.)
+**Server 2** recebe dois discos extras de 16 GiB (`vdb`/`vdc` no libvirt, `sdb`/`sdc` no VirtualBox).
 
-**Also, don't be spooked by any scary red font during the setup process. There are known issues that won't have a negative affect on the environment.**
+---
 
-_Now the deployment should be up and running!_
+## Scripts do lab (`./scripts/`)
 
-## (Recommended) Install Github Desktop to make pulling down changes easier
-_NOTE this requires a free Github account_
-1. Navigate to https://desktop.github.com/ and download Github Desktop.
-2. Create or sign in to your account.
-3. Click "Clone a repository from the Internet" and enter "rdbreak/rhcsa8env" and choose a location then "Clone".
-4. You are also able to easily pull changes when they're made available.
+| Script | Descrição |
+|--------|-----------|
+| `setup-host-fedora44.sh` | Instala dependências no Fedora (uma vez) |
+| `lab-up.sh` | Sobe **repo** → **server2** → **server1** na ordem correta |
+| `lab-health.sh` | Checagens automatizadas (igual à tabela em [Comandos úteis](#comandos-úteis-vagrant--manutenção)); exit 0 = saudável |
+| `lab-reset.sh` | Wrapper de `playbooks/reset.yml` (server1 + server2; não repõe o repo) |
+| `lab-ssh-config.sh` | Gera blocos SSH; `--install` grava em `~/.ssh/config` |
+| `lab-practice.sh` | Lista/valida exercícios em `practice/exercises/` |
 
-## Notable commands to control the environment:
-- `ansible-playbook playbooks/reset.yml` - Used for resetting Servers 1 and 2 after attempting the practice exam in the Red Hat Certs Slack workspace practice exam channel. 
-- `vagrant up` - Boots and provisions the environment
-- `vagrant destroy -f` - Shuts down and destroys the environment
-- `vagrant halt` - Only shuts down the environment VMs (can be booted up with `vagrant up`)
-- `vagrant suspend` - Puts the VMs in a suspended state
-- `vagrant resume` - Takes VMs out of a suspended state
+### Subir o lab
 
-## Other Useful Information:
-You can also use the VirtualBox console to interact with the VMs or through a terminal. If you need to reset the root password, you would need to use the console. I'm constantly making upgrades to the environments, so every once and awhile run `git pull` in the repo directory to pull down changes. If you're using Windows, it's recommended to use Github Desktop so you can easily pull changes that are made to the environment. The first time you run the vagrant up command, it will download the OS images for later use. In other words, it will take longest the first time around but will be faster when it is deployed again. You can run `vagrant destroy -f` to destroy your environment at anytime. **This will erase everything**. This environment is meant to be reuseable, If you run the `vagrant up` command after destroying the environment, the OS image will already be downloaded and environment will deploy faster. Deployment should take around 15 minutes depending on your computer. You shouldn't need to access the IPA server during your practice exams. Everything should be provided that you would normally need during an actual exam. Hope this helps in your studies!
+```bash
+./scripts/lab-up.sh
+```
 
-## Included systems:
-- repo.eight.example.com
-- server1.eight.example.com
-- server2.eight.example.com
+Ordem manual equivalente:
 
-## System Details:
-> server1
-- 192.168.55.150
-- Gateway - 192.168.55.1
-- DNS - 8.8.8.8
-> server2
-- 192.168.55.151
-- Gateway - 192.168.55.1
-- DNS - 8.8.8.8
+```bash
+vagrant up repo
+vagrant up server2
+vagrant up server1
+```
 
-There is a Repo/AppStream available to use from `http://repo.eight.example.com/BaseOS` and `http://repo.eight.example.com/AppStream`
+### Verificar saúde
 
-## Accessing the systems
-Remember to add the IP addresses to your local host file if you want to connect to the guest systems with the hostname.
-Username - vagrant
-Password - vagrant
-- For root - use `sudo` or `sudo su`
-Access example - `ssh vagrant@192.168.55.150` or `vagrant ssh system`
+```bash
+./scripts/lab-health.sh
+```
 
-## Help
-If you're having problems with the environment, please submit an issue by going to the `ISSUES` tab at the top. If you have more questions, looking for practice exams to use against this environment, or just looking for a fantastic Red Hat community to join to get your questions answered, check out the Red Hat Certs Slack Workspace. You can find the invite link at the top of this page next to the description.
+Inclui `lsblk` em **server2** (discos `vdb`/`vdc` e montagens `/extradisk1`, `/extradisk2`).
 
-## Known Issues:
+### Reset após simulado de exame
 
-Running the 'vagrant up' environment build will fail If HyperV is installed on the Windows VirtualBox host.
-Error is usually "VT-x is not available. (VERR_VMX_NO_VMX)" or similar, when the script attempts to boot the first VM.
+```bash
+./scripts/lab-reset.sh
+```
 
-Resolution seems to be either remove HyperV, or preventing its hypervisor from starting with the command:
-bcdedit /set hypervisorlaunchtype off, followed by a reboot.
+Equivalente a `ansible-playbook playbooks/reset.yml`. Os servidores reiniciam no final.
+
+### SSH direto (opcional)
+
+O `ssh vagrant@192.168.55.150` **falha** sem a chave do Vagrant. Prefira `vagrant ssh server1` ou configure o SSH:
+
+```bash
+./scripts/lab-ssh-config.sh              # ver blocos gerados
+./scripts/lab-ssh-config.sh --write      # grava .ssh-config/rhcsa9-lab.conf
+./scripts/lab-ssh-config.sh --install    # acrescenta a ~/.ssh/config
+```
+
+Depois:
+
+```bash
+ssh rhcsa9-server1          # IP do exame 192.168.55.150
+ssh rhcsa9-server1-mgmt     # IP de gestão libvirt (vagrant ssh-config)
+ssh rhcsa9-repo
+ssh rhcsa9-server2
+```
+
+### Primeira execução
+
+1. Download da box `generic/centos9s`.
+2. **Repo:** `dnf reposync` + pacotes bootstrap — pode levar **30–90 minutos**.
+3. **Server 2:** discos extras (`scripts/provision-server2-disks.sh` via Vagrant).
+4. **Server 1:** Ansible `master.yml` (repo + servers) e reinício.
+
+---
+
+## Acesso às VMs
+
+| Conta | Senha |
+|--------|--------|
+| `vagrant` | `vagrant` |
+| `root` | `password` (via `sudo` / `sudo su -`) |
+
+```bash
+vagrant ssh server1
+vagrant ssh server2
+vagrant ssh repo
+```
+
+Opcional no `/etc/hosts` do Fedora:
+
+```ini
+192.168.55.149 repo.nine.example.com repo
+192.168.55.150 server1.nine.example.com server1
+192.168.55.151 server2.nine.example.com server2
+```
+
+**Server 2:** NICs extras `192.168.55.175`, `192.168.55.176`; discos `/extradisk1`, `/extradisk2`.
+
+---
+
+## Comandos úteis (Vagrant / manutenção)
+
+### Scripts (`./scripts/`)
+
+| Comando | O que faz de facto |
+|---------|-------------------|
+| `./scripts/lab-up.sh` | `vagrant up repo`, depois `server2`, depois `server1` (ordem recomendada no primeiro deploy) |
+| `./scripts/lab-health.sh` | Corre checagens nas 3 VMs (estado Vagrant, IP `192.168.55.x`, `repomd.xml`, `httpd`, repos vazios em server1/2, `lsblk`/extradiscos); termina com código 0 ou 1 |
+| `./scripts/lab-reset.sh` | Executa `ansible-playbook playbooks/reset.yml` — repõe **server1** e **server2** (não altera o **repo**); reinicia os dois no final |
+| `./scripts/lab-ssh-config.sh --install` | Adiciona entradas `rhcsa9-*` em `~/.ssh/config` (chave Vagrant + IP do exame e IP de gestão libvirt) |
+
+### Vagrant — estado e ciclo de vida
+
+| Comando | O que faz de facto |
+|---------|-------------------|
+| `vagrant status` | Lista `repo`, `server1`, `server2` e o estado (`running`, `poweroff`, etc.) |
+| `vagrant halt` | Desliga **todas** as VMs do projeto (dados dos discos mantêm-se) |
+| `vagrant destroy -f` | Apaga **todas** as VMs e o estado Vagrant (discos libvirt no pool `default` / ficheiros `disk-*.vdi` no projeto podem ficar) |
+| `vagrant destroy -f server2 && vagrant up server2` | Recria só **server2** (inclui discos `vdb`/`vdc` no libvirt); corre apenas o provisioner **shell** dos discos — para reaplicar Ansible em server2 use `vagrant provision server1` |
+
+### Vagrant — provision (reconfigurar sem destruir)
+
+| Comando | O que faz de facto |
+|---------|-------------------|
+| `vagrant provision repo` | Shell (`sshpass`) + Ansible `playbooks/repo.yml` na VM **repo** (mirror, `httpd`, firewalld, symlinks `BaseOS`/`AppStream`) |
+| `vagrant provision server1` | Ansible `playbooks/master.yml` (`repo.yml` → `server1.yml` → `server2.yml` → `welcome.yml`) em **repo**, **server1** e **server2**; no fim **reboot** de server1 (`run: always`) |
+| `vagrant provision server2` | Apenas `scripts/provision-server2-disks.sh` (formatar/montar `/extradisk1` e `/extradisk2`) — **não** corre `server2.yml` |
+
+Equivalente Ansible só em server2 (com VMs já no ar): `ansible-playbook playbooks/server2.yml`.
+
+### Inspeção rápida nas guests
+
+| Comando | O que faz de facto |
+|---------|-------------------|
+| `vagrant ssh server1` | Sessão interativa em server1 (rede de gestão Vagrant; não usa `192.168.55.150` diretamente) |
+| `vagrant ssh server2 -c 'lsblk'` | Lista discos (`vda`, `vdb`, `vdc`) e montagens (`/extradisk1`, `/extradisk2`) |
+| `vagrant ssh server1 -c 'rpm -q httpd; systemctl is-active httpd; ls /etc/yum.repos.d'` | Confirma `httpd` instalado/ativo e diretório de repos vazio (cenário de exame) |
+| `vagrant ssh server2 -c 'rpm -q httpd man-pages'` | Confirma pacotes baseline instalados antes de apagar os `.repo` |
+| `vagrant ssh repo -c 'curl -sI http://127.0.0.1/BaseOS/repodata/repomd.xml'` | Testa se o mirror HTTP no **repo** devolve cabeçalho (esperado `HTTP/1.1 200`) |
+
+Atualizar o projeto: `git pull`.
+
+---
+
+## Estrutura do projeto
+
+```
+scripts/
+  lab-up.sh              # deploy ordenado
+  lab-health.sh          # checagens
+  lab-reset.sh           # reset Ansible
+  lab-ssh-config.sh      # SSH opcional
+  setup-host-fedora44.sh
+  provision-server2-disks.sh
+  lib/common.sh
+playbooks/
+  master.yml             # repo → server1 → server2 → welcome
+  repo.yml               # mirror + httpd
+  server1.yml / server2.yml
+  reset.yml
+  tasks/
+Vagrantfile
+inventory
+ansible.cfg
+```
+
+O provisioner **Ansible** corre no **host Fedora** (não dentro das VMs).
+
+---
+
+## Diferenças em relação ao RHCSA 8 original
+
+- Domínio: `nine.example.com`
+- Guests: **CentOS Stream 9** (`generic/centos9s`)
+- Repo: `dnf reposync` + symlinks HTTP + RPMs bootstrap (`httpd`, etc.)
+- Provider preferido no Fedora: **libvirt**
+- Scripts unificados em `./scripts/`
+
+---
+
+## Problemas conhecidos
+
+**Repo HTTP 404 em `/BaseOS/repodata`**
+
+- `vagrant provision repo` ou `./scripts/lab-health.sh`
+
+**`httpd` / `man-pages` nos servidores**
+
+- `vagrant provision repo` depois `vagrant provision server1`
+
+**Discos extras em server2**
+
+- `vagrant destroy -f server2 && vagrant up server2`
+- `vagrant provision server2` se só o shell dos discos falhou
+
+**SSH direto `Permission denied (publickey)`**
+
+- Use `vagrant ssh` ou `./scripts/lab-ssh-config.sh --install`
+
+**Reset e GRUB**
+
+- `reset.yml` restaura `/etc/default/grub.laborig` se existir.
+
+---
+
+## Licença
+
+Ver [LICENSE](LICENSE). Derivado de [rdbreak/rhcsa8env](https://github.com/rdbreak/rhcsa8env), adaptado para RHCSA 9 / CentOS Stream 9 / Fedora 44.

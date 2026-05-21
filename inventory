@@ -1,6 +1,8 @@
 [repo]
-repo.eight.example.com ansible_host=192.168.55.149 ansible_user=vagrant ansible_ssh_pass=vagrant ansible_python_interpreter=/usr/bin/python3
+repo.nine.example.com ansible_host=192.168.55.149 ansible_user=vagrant ansible_ssh_pass=vagrant ansible_python_interpreter=/usr/bin/python3 static_ipv4=192.168.55.149/24
+
 [server1]
-server1.eight.example.com ansible_host=192.168.55.150 ansible_user=vagrant ansible_ssh_pass=vagrant ansible_python_interpreter=/usr/bin/python3
+server1.nine.example.com ansible_host=192.168.55.150 ansible_user=vagrant ansible_ssh_pass=vagrant ansible_python_interpreter=/usr/bin/python3 static_ipv4=192.168.55.150/24
+
 [server2]
-server2.eight.example.com ansible_host=192.168.55.151 ansible_user=vagrant ansible_ssh_pass=vagrant ansible_python_interpreter=/usr/bin/python3
+server2.nine.example.com ansible_host=192.168.55.151 ansible_user=vagrant ansible_ssh_pass=vagrant ansible_python_interpreter=/usr/bin/python3 static_ipv4=192.168.55.151/24

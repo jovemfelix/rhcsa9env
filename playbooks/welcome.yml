@@ -1,23 +1,16 @@
 ---
-- name: Creating Welcome Message
+- name: RHCSA 9 lab deployment complete
   hosts: server1
   strategy: free
-  gather_facts: False
+  gather_facts: false
   become: true
   tasks:
-  - name: Welcome to the RHCSA 8 Study/Test Environment!
-    debug:
-      msg:
-        - ' The repo server, Server 1, and Server 2 have been set up successfully!'
-        - '------------------------------------------------------------------------'
-        - ' Server 1 is rebooting.  If you are unable to access it right away,'
-        - ' wait a couple moments, then try again.'
-        - '------------------------------------------------------------------------'
-        - ' Accessing The Systems:'
-        - '- Server 1 - 192.168.55.150'
-        - '- Server 2 - 192.168.55.151'
-        - '- Username/Password - vagrant/vagrant or root/password'
-        - '- Access example - `ssh root@192.168.55.150` or `vagrant ssh system1`'
-        - ' -----------------------------------------------------------------------'
-        - '- Two additional interfaces and drives are on Server 2.'
-        - '- Happy Studying!'
+    - name: Welcome message
+      debug:
+        msg:
+          - "Repo, Server 1, and Server 2 are configured (CentOS Stream 9 / RHCSA 9 objectives)."
+          - "Server 1 is rebooting; wait a moment before reconnecting."
+          - "Server 1 - 192.168.55.150 | Server 2 - 192.168.55.151"
+          - "Credentials - vagrant/vagrant or root/password"
+          - "Example - ssh vagrant@192.168.55.150 or vagrant ssh server1"
+          - "Server 2 has two extra NICs and two extra disks."

@@ -1,0 +1,15 @@
+---
+- name: Allow lab services in firewalld (permanent)
+  command: firewall-cmd --permanent --add-service={{ item }}
+  loop:
+    - http
+    - https
+    - dns
+    - ftp
+  register: fw_add
+  changed_when: "'ALREADY_ENABLED' not in fw_add.stdout"
+  failed_when: fw_add.rc != 0 and 'ALREADY_ENABLED' not in fw_add.stdout
+
+- name: Reload firewalld
+  command: firewall-cmd --reload
+  changed_when: false

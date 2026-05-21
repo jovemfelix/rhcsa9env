@@ -1,0 +1,26 @@
+---
+- name: Wait for lab repo metadata
+  uri:
+    url: http://repo/BaseOS/repodata/repomd.xml
+    status_code: 200
+  register: repo_ready
+  retries: 10
+  delay: 6
+  until: repo_ready is succeeded
+
+- name: Configure temporary lab repository
+  copy:
+    dest: /etc/yum.repos.d/rpms.repo
+    content: |
+      [base]
+      name=Base
+      baseurl=http://repo/BaseOS
+      gpgcheck=0
+      enabled=1
+
+      [apps]
+      name=Apps
+      baseurl=http://repo/AppStream
+      gpgcheck=0
+      enabled=1
+    force: true

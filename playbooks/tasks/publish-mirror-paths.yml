@@ -1,0 +1,30 @@
+---
+# reposync creates BaseOS/baseos and AppStream/appstream; exam-style URLs use /BaseOS and /AppStream
+- name: Publish BaseOS mirror at http://repo/BaseOS/
+  file:
+    src: "/var/www/html/BaseOS/baseos/{{ item }}"
+    dest: "/var/www/html/BaseOS/{{ item }}"
+    state: link
+    force: true
+  loop:
+    - repodata
+    - Packages
+
+- name: Publish AppStream mirror at http://repo/AppStream/
+  file:
+    src: "/var/www/html/AppStream/appstream/{{ item }}"
+    dest: "/var/www/html/AppStream/{{ item }}"
+    state: link
+    force: true
+  loop:
+    - repodata
+    - Packages
+
+- name: Verify BaseOS repomd is served
+  uri:
+    url: http://127.0.0.1/BaseOS/repodata/repomd.xml
+    status_code: 200
+  register: repomd_check
+  retries: 3
+  delay: 5
+  until: repomd_check is succeeded

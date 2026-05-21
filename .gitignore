@@ -1,5 +1,7 @@
 .vagrant/
-disk-0-1.vdi/
-*.retry.yml/
-..DS_Store
+disk-0-1.vdi
+disk-0-2.vdi
+*.retry
+.ansible-tmp/
+.ssh-config/
 .DS_Store

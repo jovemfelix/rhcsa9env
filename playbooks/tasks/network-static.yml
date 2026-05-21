@@ -1,0 +1,22 @@
+---
+- name: Configure static IPv4 on secondary NIC (eth1)
+  shell: |
+    set -euo pipefail
+    CONN=$(nmcli -t -f NAME,DEVICE con show | awk -F: '$2=="eth1"{print $1; exit}')
+    if [ -z "${CONN}" ]; then
+      echo "No NetworkManager connection for eth1" >&2
+      exit 1
+    fi
+    nmcli con mod "${CONN}" \
+      ipv4.addresses "{{ static_ipv4 }}" \
+      ipv4.gateway "{{ static_gateway | default('192.168.55.1') }}" \
+      ipv4.dns "{{ static_dns | default('8.8.8.8') }}" \
+      ipv4.dns-search "{{ static_dns_search | default('nine.example.com') }}" \
+      ipv4.method manual
+  args:
+    executable: /bin/bash
+
+- name: Reload NetworkManager
+  service:
+    name: NetworkManager
+    state: restarted
