@@ -7,9 +7,33 @@
 - Contexto de `file1` adequado (`httpd_sys_content_t`)
 - `curl` local à porta 82 funciona
 
-## Pacotes
+## Pacotes (`semanage` not found)
 
-Se `semanage` faltar, instala com repo do lab (exercise 01): `policycoreutils-python-utils`, `httpd`.
+O binário vem do RPM **`policycoreutils-python-utils`** (AppStream). O mirror do lab pode não tê-lo até atualizares o **repo**.
+
+**No server1** (com repos `http://repo/...` configurados, exercise 01):
+
+```bash
+sudo dnf install -y policycoreutils-python-utils
+sudo semanage --help
+```
+
+Se `No match for argument`:
+
+1. No **host**, atualiza o mirror no repo e repodata:
+
+```bash
+vagrant ssh repo -c 'sudo dnf download --resolve --destdir /var/www/html/AppStream/appstream/Packages policycoreutils-python-utils && sudo createrepo_c --update /var/www/html/AppStream/appstream'
+```
+
+2. No **server1**:
+
+```bash
+sudo dnf clean all
+sudo dnf install -y policycoreutils-python-utils
+```
+
+Também úteis: `setroubleshoot-server` (diagnóstico), `httpd` (já no lab).
 
 ## Listen port 82
 

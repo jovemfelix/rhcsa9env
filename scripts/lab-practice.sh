@@ -79,6 +79,9 @@ cmd_reset() {
     07-lvm-database-server2)
       vagrant ssh server2 -c 'sudo umount /mnt/database 2>/dev/null; sudo lvremove -fy datastore/database 2>/dev/null; sudo vgremove -fy datastore 2>/dev/null; sudo pvremove -fy /dev/vdc 2>/dev/null; sudo wipefs -a /dev/vdc 2>/dev/null; true'
       ;;
+    09-extend-swap-lvm-server2)
+      vagrant ssh server2 -c 'set -e; sudo swapoff /dev/centos9s/swap 2>/dev/null || true; sudo lvreduce -fy -L 2G /dev/centos9s/swap 2>/dev/null || true; sudo mkswap /dev/centos9s/swap 2>/dev/null || true; sudo swapon /dev/centos9s/swap 2>/dev/null || true; sudo vgreduce -fy centos9s /dev/vdb 2>/dev/null || true; sudo pvremove -fy /dev/vdb 2>/dev/null || true; sudo wipefs -a /dev/vdb 2>/dev/null || true; sudo mkfs.ext4 -F -L extradisk1 /dev/vdb; grep -q extradisk1 /etc/fstab || echo "LABEL=extradisk1 /extradisk1 ext4 defaults 0 0" | sudo tee -a /etc/fstab; sudo mount /extradisk1 || true'
+      ;;
     01-yum-repo-client)
       vagrant ssh server1 -c 'sudo rm -rf /etc/yum.repos.d/*'
       ;;

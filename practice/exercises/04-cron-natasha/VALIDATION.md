@@ -9,10 +9,13 @@
 ## Se falhar
 
 ```bash
-systemctl enable --now crond
-crontab -u natasha -e
+sudo systemctl enable --now crond
+sudo crontab -u natasha -e
+sudo crontab -u natasha -l
 # */2 * * * * logger "EX200 in progress"
 ```
+
+**Nota:** `crontab -u` exige **root** (usa `sudo`). O `validate.sh` também usa `sudo`, porque `vagrant ssh` entra como `vagrant`.
 
 ## Consolidar
 

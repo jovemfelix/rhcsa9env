@@ -1,0 +1,101 @@
+@startuml Exercise09-Extend-Swap-LVM-server2
+!theme plain
+title Exercise 09 — Extend swap LV on server2 (terminal)\n<size:12>vdb → centos9s | swap 2 GiB → 2,5 GiB | vdc/datastore unchanged (ex. 07)</size>
+
+skinparam backgroundColor #FEFEFE
+skinparam sequenceMessageAlign center
+skinparam BoxPadding 8
+skinparam ParticipantPadding 12
+
+skinparam participant {
+  BackgroundColor<<host>> #D6EAF8
+  BorderColor<<host>> #2874A6
+  BackgroundColor<<vm>> #D5F5E3
+  BorderColor<<vm>> #1E8449
+  BackgroundColor<<disk>> #FCF3CF
+  BorderColor<<disk>> #B7950B
+  BackgroundColor<<lvm>> #FDEBD0
+  BorderColor<<lvm>> #CA6F1E
+  BackgroundColor<<swap>> #FADBD8
+  BorderColor<<swap>> #C0392B
+  BackgroundColor<<validate>> #E8DAEF
+  BorderColor<<validate>> #7D3C98
+}
+
+actor "Tu\n(Fedora host)" as Admin <<host>>
+participant "server2\nroot CLI" as S2 <<vm>>
+participant "/dev/vdb\n(ex-extradisk1)" as VDB <<disk>>
+participant "VG centos9s\n(vda2 + vdb)" as VG <<lvm>>
+participant "LV swap\n/dev/centos9s/swap" as Swap <<swap>>
+participant "validate.sh\n(lab-practice)" as Val <<validate>>
+
+== Estado inicial (lab) ==
+note over VDB #FCF3CF
+  **vdb**: ext4 montado em **/extradisk1**
+end note
+note over VG #FDEBD0
+  **centos9s** só em **/dev/vda2**
+  **0** free PE — swap LV = **2 GiB**
+end note
+note over VDB #D5F5E3
+  **vdc** / **datastore** (ex. 07) — **não mexer**
+end note
+
+== A — Libertar vdb ==
+Admin -> S2 : ssh / vagrant ssh server2
+S2 -> S2 : umount /extradisk1
+S2 -> S2 : remover linha extradisk1 em /etc/fstab
+S2 -> VDB : wipefs -a /dev/vdb
+note right of VDB #FCF3CF
+  vdb sem MOUNTPOINT
+end note
+
+== B — Dar espaço ao VG do sistema ==
+S2 -> VDB : pvcreate /dev/vdb
+S2 -> VG : vgextend centos9s /dev/vdb
+note over VG #FDEBD0
+  **~16 GiB** free PE em centos9s
+  (pvs: /dev/vdb → centos9s)
+end note
+
+== C — Estender swap LV (+512 MiB) ==
+S2 -> Swap : swapoff /dev/centos9s/swap
+note over Swap #FADBD8
+  swap **desativado** antes do resize
+end note
+S2 -> Swap : lvextend -L +512M /dev/centos9s/swap
+note over Swap #FADBD8
+  LV passa a **~2,5 GiB**
+  (lvs: swap 2.50g)
+end note
+S2 -> Swap : mkswap /dev/centos9s/swap
+note over Swap #FADBD8
+  **Novo UUID** — obrigatório após mkswap
+end note
+S2 -> Swap : swapon /dev/centos9s/swap
+note over Swap #FADBD8
+  /proc/swaps ~2621436 KiB
+  free -h: Swap **2.5Gi**
+end note
+
+== D — Persistência ==
+S2 -> S2 : blkid /dev/centos9s/swap
+S2 -> S2 : atualizar /etc/fstab (UUID + swap)
+S2 -> S2 : swapoff + swapon -a (teste)
+
+== E — Validação no host ==
+Admin -> Val : ./scripts/lab-practice.sh validate 09
+Val -> S2 : vagrant ssh — pvs, lvs, swapon, fstab
+Val --> Admin : **7 OK** — exercício correto
+
+legend right
+  | Cor | Camada |
+  | <#D6EAF8> | Host / administrador |
+  | <#D5F5E3> | VM server2 |
+  | <#FCF3CF> | Disco vdb |
+  | <#FDEBD0> | LVM volume group |
+  | <#FADBD8> | Logical volume swap |
+  | <#E8DAEF> | Script de validação |
+endlegend
+
+@enduml

@@ -59,15 +59,17 @@
 
     - import_tasks: tasks/publish-mirror-paths.yml
 
-    - name: Download lab bootstrap RPMs (httpd stack is not complete after reposync --newest-only)
+    - name: Download lab bootstrap RPMs (reposync --newest-only omits many deps)
       shell: |
         set -euo pipefail
         dnf download --destdir /var/www/html/BaseOS/baseos/Packages \
-          httpd-filesystem mailcap
+          httpd-filesystem mailcap selinux-policy selinux-policy-targeted
         dnf download --destdir /var/www/html/AppStream/appstream/Packages \
-          httpd man-pages centos-logos-httpd
+          httpd man-pages centos-logos-httpd policycoreutils-python-utils \
+          cockpit-storaged cockpit-system cockpit-bridge
+        touch /var/www/html/.bootstrap-rpms-v2
       args:
-        creates: /var/www/html/BaseOS/baseos/Packages/mailcap-2.1.49-5.el9.noarch.rpm
+        creates: /var/www/html/.bootstrap-rpms-v2
         executable: /bin/bash
 
     - name: Refresh mirror repodata after bootstrap RPMs

@@ -43,10 +43,11 @@ Ver também [LAB-CONTEXT.md](LAB-CONTEXT.md).
 | 04 | `04-cron-natasha` | server1 | cron | 02 |
 | 05 | `05-acl-var-tmp-fstab` | server1 | ACL | 02 |
 | 06 | `06-selinux-httpd-port82` | server1 | SELinux + httpd | 01 (repo) |
-| 07 | `07-lvm-database-server2` | server2 | LVM + ext4 | — |
+| 07 | `07-lvm-database-server2` | server2 | LVM em **/dev/vdc** (substitui `/extradisk2` por `/mnt/database`) | — |
 | 08 | `08-secondary-ip-server2` | server2 | nmcli / IP secundário | — |
+| 09 | `09-extend-swap-lvm-server2` | server2 | Estender LV **swap** em **centos9s** com **vdb** (CLI: `vgextend`, `lvextend`, `mkswap`) | — |
 
-Ordem sugerida: **01 → 02 → 03 → 04 → 05 → 06**, depois **07–08** em server2.
+Ordem sugerida: **01 → 02 → 03 → 04 → 05 → 06**, depois **07 → 09 → 08** (ou **07 → 08 → 09**) em server2.
 
 ## Modo “pergunta → validação” (com o assistente / estudo)
 
